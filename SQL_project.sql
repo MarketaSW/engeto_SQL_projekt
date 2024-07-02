@@ -362,45 +362,238 @@ WITH AvgPrices AS (
     WHERE 
         YEAR(cpr.date_from) BETWEEN 2006 AND 2018
     GROUP BY 
-    	YEAR(cpr.date_from)
-    ),
+        YEAR(cpr.date_from)
+),
 AvgPriceDiff AS (
-   	SELECT 
-    	a.`year`,
-   		ROUND(((a.avg_price - b.avg_price) / b.avg_price) * 100, 2) AS yearly_price_diff_pct
-	FROM 
-    	AvgPrices a
-	LEFT JOIN 
-    	AvgPrices b ON a.`year` = b.`year` + 1	
-   ),
+    SELECT 
+        a.`year`,
+        ROUND(((a.avg_price - b.avg_price) / b.avg_price) * 100, 2) AS yearly_price_diff_pct
+    FROM 
+        AvgPrices a
+    LEFT JOIN 
+        AvgPrices b ON a.`year` = b.`year` + 1
+),
 AvgSalaries AS (
-	SELECT 
-		ROUND(AVG(cp.value)) AS avg_salary,
-		cp.payroll_year 	
-	FROM czechia_payroll cp 
-	WHERE cp.value_type_code = '5958' 
-	AND cp.payroll_year BETWEEN 2006 AND 2018 
-	GROUP BY payroll_year
-	),
+    SELECT 
+        ROUND(AVG(cp.value)) AS avg_salary,
+        cp.payroll_year
+    FROM 
+        czechia_payroll cp 
+    WHERE 
+        cp.value_type_code = '5958'
+        AND cp.payroll_year BETWEEN 2006 AND 2018
+    GROUP BY 
+        cp.payroll_year
+),
 AvgSalaryDiff AS (
-	SELECT
-		a.payroll_year,
-		ROUND(((a.avg_salary - b.avg_salary) / b.avg_salary) * 100, 2) AS yearly_payroll_diff_pct
-	FROM AvgSalaries a
-	LEFT JOIN AvgSalaries b ON a.payroll_year = b.payroll_year + 1
-	)
+    SELECT
+        a.payroll_year,
+        ROUND(((a.avg_salary - b.avg_salary) / b.avg_salary) * 100, 2) AS yearly_payroll_diff_pct
+    FROM 
+        AvgSalaries a
+    LEFT JOIN 
+        AvgSalaries b ON a.payroll_year = b.payroll_year + 1
+)
 SELECT 
-	p.`year`,
-	p.yearly_price_diff_pct,
-	s.yearly_payroll_diff_pct,
-	(p.yearly_price_diff_pct - s.yearly_payroll_diff_pct) AS yearly_difference,
-	CASE WHEN (p.yearly_price_diff_pct - s.yearly_payroll_diff_pct) > 10 THEN 1 ELSE 0 END AS flag_10_pct
-FROM AvgPriceDiff p
-JOIN AvgSalaryDiff s ON p.`year` = s.payroll_year
-WHERE p.yearly_price_diff_pct IS NOT NULL
-ORDER BY yearly_difference DESC
+    p.`year`,
+    p.yearly_price_diff_pct,
+    s.yearly_payroll_diff_pct,
+    (p.yearly_price_diff_pct - s.yearly_payroll_diff_pct) AS yearly_difference,
+    CASE WHEN (p.yearly_price_diff_pct - s.yearly_payroll_diff_pct) > 10 THEN 1 ELSE 0 END AS flag_10_pct
+FROM 
+    AvgPriceDiff p
+JOIN 
+    AvgSalaryDiff s ON p.`year` = s.payroll_year
+WHERE 
+    p.yearly_price_diff_pct IS NOT NULL
+ORDER BY 
+    yearly_difference DESC;
+
+-- Takový rok neexistuje, nejblíž je tomu rok 2013, kde nárust cen potravin byl vyšší o 7%.
+
+/* 6) MÁ VÝŠKA HDP VLIV NA ZMĚNY VE MZDÁCH A CENÁCH POTRAVIN?
+ * Neboli, pokud HDP vzroste výrazněji v jednom roce, projeví se to na cenách potravin
+ * či mzdách ve stejném nebo následujícím roce výraznějším růstem?   */
+
+-- a) informace o HDP
+
+SELECT *
+FROM economies e 
+WHERE country LIKE ('%cze%')
+AND `year` BETWEEN 2006 AND 2018;
+
+-- b) meziroční nárust HDP
+
+WITH HDPDiff AS (
+	SELECT 
+		e.`year`,
+		e.GDP
+	FROM economies e 
+	WHERE country = 'Czech Republic' AND `year` BETWEEN 2006 AND 2018)
+SELECT
+	a.`year`,
+	ROUND(((a.GDP - b.GDP) / b.GDP) * 100, 2) AS yearly_GDP_diff_pct
+	FROM HDPDiff a
+	LEFT JOIN HDPDiff b ON a.`year` = b.`year` + 1
 ;
 
--- Takový rok neexistuje, nejblíž je tomu rok 2013, kde nárust cen byl vyšší o 7%.
+-- c) flags meziročního nárustu HDP a cen potravin a mezd
 
-   
+WITH YearlyGDP AS (
+	SELECT 
+		e.`year`,
+		e.GDP
+	FROM economies e 
+	WHERE country = 'Czech Republic' AND `year` BETWEEN 2006 AND 2018
+),
+GDPDiff	AS (
+	SELECT
+		a.`year`,
+		ROUND(((a.GDP - b.GDP) / b.GDP) * 100, 2) AS yearly_GDP_diff_pct
+	FROM YearlyGDP a
+	LEFT JOIN YearlyGDP b ON a.`year` = b.`year` + 1
+),
+AvgPrices AS (
+    SELECT 
+        ROUND(AVG(cpr.value), 2) AS avg_price,
+        YEAR(cpr.date_from) AS `year`
+    FROM 
+        czechia_price cpr
+    WHERE 
+        YEAR(cpr.date_from) BETWEEN 2006 AND 2018
+    GROUP BY 
+        YEAR(cpr.date_from)
+),
+AvgPriceDiff AS (
+    SELECT 
+        a.`year`,
+        ROUND(((a.avg_price - b.avg_price) / b.avg_price) * 100, 2) AS yearly_price_diff_pct
+    FROM 
+        AvgPrices a
+    LEFT JOIN 
+        AvgPrices b ON a.`year` = b.`year` + 1
+),
+AvgSalaries AS (
+    SELECT 
+        ROUND(AVG(cp.value)) AS avg_salary,
+        cp.payroll_year
+    FROM 
+        czechia_payroll cp 
+    WHERE 
+        cp.value_type_code = '5958'
+        AND cp.payroll_year BETWEEN 2006 AND 2018
+    GROUP BY 
+        cp.payroll_year
+),
+AvgSalaryDiff AS (
+    SELECT
+        a.payroll_year,
+        ROUND(((a.avg_salary - b.avg_salary) / b.avg_salary) * 100, 2) AS yearly_payroll_diff_pct
+    FROM 
+        AvgSalaries a
+    LEFT JOIN 
+        AvgSalaries b ON a.payroll_year = b.payroll_year + 1    
+) 
+SELECT 
+	g.`year`,
+	g.yearly_GDP_diff_pct,
+	CASE WHEN ABS(g.yearly_GDP_diff_pct) > 3 THEN 1 ELSE 0 END AS flag_GDP_change,
+	p.yearly_price_diff_pct,
+	CASE WHEN ABS(p.yearly_price_diff_pct) > 5 THEN 1 ELSE 0 END AS flag_price_5_pct,
+	s.yearly_payroll_diff_pct,
+	CASE WHEN ABS(s.yearly_payroll_diff_pct) > 5 THEN 1 ELSE 0 END AS flag_salary_5_pct
+FROM
+	GDPDiff g
+JOIN 
+	AvgPriceDiff p ON g.`year` = p.`year`
+JOIN 
+	AvgSalaryDiff s ON g.`year` = s.payroll_year
+WHERE 
+	p.yearly_price_diff_pct IS NOT NULL
+	; 	
+
+-- porovnání významného růstu HDP a cen a mezd ve dvouletém horizontu
+
+WITH YearlyGDP AS (
+	SELECT 
+		e.`year`,
+		e.GDP
+	FROM economies e 
+	WHERE country = 'Czech Republic' AND `year` BETWEEN 2006 AND 2018
+),
+GDPDiff	AS (
+	SELECT
+		a.`year`,
+		ROUND(((a.GDP - b.GDP) / b.GDP) * 100, 2) AS yearly_GDP_diff_pct
+	FROM YearlyGDP a
+	LEFT JOIN YearlyGDP b ON a.`year` = b.`year` + 1
+),
+AvgPrices AS (
+    SELECT 
+        ROUND(AVG(cpr.value), 2) AS avg_price,
+        YEAR(cpr.date_from) AS `year`
+    FROM 
+        czechia_price cpr
+    WHERE 
+        YEAR(cpr.date_from) BETWEEN 2006 AND 2018
+    GROUP BY 
+        YEAR(cpr.date_from)
+),
+AvgPriceDiff AS (
+    SELECT 
+        a.`year`,
+        ROUND(((a.avg_price - b.avg_price) / b.avg_price) * 100, 2) AS yearly_price_diff_pct
+    FROM 
+        AvgPrices a
+    LEFT JOIN 
+        AvgPrices b ON a.`year` = b.`year` + 1
+),
+AvgSalaries AS (
+    SELECT 
+        ROUND(AVG(cp.value)) AS avg_salary,
+        cp.payroll_year
+    FROM 
+        czechia_payroll cp 
+    WHERE 
+        cp.value_type_code = '5958'
+        AND cp.payroll_year BETWEEN 2006 AND 2018
+    GROUP BY 
+        cp.payroll_year
+),
+AvgSalaryDiff AS (
+    SELECT
+        a.payroll_year,
+        ROUND(((a.avg_salary - b.avg_salary) / b.avg_salary) * 100, 2) AS yearly_payroll_diff_pct
+    FROM 
+        AvgSalaries a
+    LEFT JOIN 
+        AvgSalaries b ON a.payroll_year = b.payroll_year + 1    
+),
+Flags AS (
+	SELECT 
+		g.`year`,
+		g.yearly_GDP_diff_pct,
+		CASE WHEN ABS(g.yearly_GDP_diff_pct) > 3 THEN 1 ELSE 0 END AS flag_GDP_change,
+		p.yearly_price_diff_pct,
+		CASE WHEN ABS(p.yearly_price_diff_pct) > 5 THEN 1 ELSE 0 END AS flag_price_5_pct,
+		s.yearly_payroll_diff_pct,
+		CASE WHEN ABS(s.yearly_payroll_diff_pct) > 5 THEN 1 ELSE 0 END AS flag_salary_5_pct
+	FROM
+		GDPDiff g
+	JOIN 
+		AvgPriceDiff p ON g.`year` = p.`year`
+	JOIN 
+		AvgSalaryDiff s ON g.`year` = s.payroll_year
+	WHERE 
+		p.yearly_price_diff_pct IS NOT NULL
+)
+SELECT 
+	f.`year`,
+	CASE WHEN f.flag_GDP_change = 1 AND f.flag_price_5_pct = 1 THEN 1 ELSE 0 END AS impact_price_1Y,
+    CASE WHEN f.flag_GDP_change = 1 AND f2.flag_price_5_pct = 1 THEN 1 ELSE 0 END AS impact_price_2Y,
+    CASE WHEN f.flag_GDP_change = 1 AND f.flag_salary_5_pct = 1 THEN 1 ELSE 0 END AS impact_salary_1Y,
+    CASE WHEN f.flag_GDP_change = 1 AND f2.flag_salary_5_pct = 1 THEN 1 ELSE 0 END AS impact_salary_2Y
+FROM 
+	Flags f
+JOIN Flags f2 ON f.`year` = f2.`year` + 1	
+ORDER BY f.`year` ;
