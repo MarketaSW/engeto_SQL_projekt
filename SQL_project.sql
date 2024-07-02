@@ -589,6 +589,7 @@ Flags AS (
 )
 SELECT 
 	f.`year`,
+	f.flag_GDP_change,
 	CASE WHEN f.flag_GDP_change = 1 AND f.flag_price_5_pct = 1 THEN 1 ELSE 0 END AS impact_price_1Y,
     CASE WHEN f.flag_GDP_change = 1 AND f2.flag_price_5_pct = 1 THEN 1 ELSE 0 END AS impact_price_2Y,
     CASE WHEN f.flag_GDP_change = 1 AND f.flag_salary_5_pct = 1 THEN 1 ELSE 0 END AS impact_salary_1Y,
@@ -597,3 +598,45 @@ FROM
 	Flags f
 JOIN Flags f2 ON f.`year` = f2.`year` + 1	
 ORDER BY f.`year` ;
+
+/* -> S jistotou lze říci, že pokud nedojde ke změně v HDP nad 3%, nedojde ani ke změně v cenách a mzdách o více jak 5%. 
+ * Naopak pokud se HDP zvýší o více jak 3%, lze v následujícím roce nebo dvou sledovat i proměnu v cenách a mzdách o více jak 5%.
+ */
+
+-- 7) Jako dodatečný materiál připravte i tabulku s HDP, GINI koeficientem a populací dalších evropských států ve stejném období, jako primární přehled pro ČR.
+
+-- a) vyhledání zemí v Evropě
+
+SELECT
+    country
+FROM
+    countries c 
+WHERE
+   	CAST(independence_date AS INT) <= 2006
+    AND continent = 'Europe'
+;
+
+
+
+-- b) HDP, GINI a populace
+WITH Europe AS (
+	SELECT
+    	country
+	FROM
+    	countries 
+	WHERE
+   		CAST(independence_date AS INT) <= 2006
+    	AND continent = 'Europe'
+)
+SELECT 
+	e.country,
+	e.`year`,
+	e.GDP,
+	e.gini,
+	e.population
+FROM
+	economies e
+JOIN 
+	Europe eu ON e.country = eu.country 
+WHERE e.`year` BETWEEN 2006 AND 2018
+ORDER BY e.country, e.`year`;
