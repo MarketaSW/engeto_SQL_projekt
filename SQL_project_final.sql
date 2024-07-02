@@ -12,6 +12,19 @@ CREATE TABLE t_marketa_sverakova_project_SQL_primary_final (
 
 -- Mzdy a ceny pro srovnatelné období a odvětví:
 
+SELECT DISTINCT
+MIN(payroll_year) AS min_cp,
+MAX(payroll_year) AS max_cp
+FROM czechia_payroll cp 
+UNION
+SELECT DISTINCT 
+MIN(date_from) AS min_cp2,
+MAX(date_from) AS max_cp2
+FROM czechia_price cp2 ;
+
+SELECT *
+FROM czechia_payroll_value_type cpvt ;
+
 INSERT INTO t_marketa_sverakova_project_SQL_primary_final (year, industry_branch_code, industry_name, avg_salary, avg_price_bread, avg_price_milk)
 WITH AvgSalaries AS (
     SELECT 
@@ -69,5 +82,42 @@ JOIN (
 ) g
 ON t.year = g.year
 SET t.GDP = g.GDP;
+
+-- 1/ ROZDÍL ROČNÍCH MEZD PRO JEDNOTLIVÁ ODVĚTVÍ:
+
+WITH YearlyDifference AS (
+    SELECT 
+    	a.industry_branch_code,
+    	a.`year`,
+        a.avg_salary AS current_salary,
+        b.avg_salary AS previous_salary,
+        (a.avg_salary - b.avg_salary) AS yearly_difference
+    FROM t_marketa_sverakova_project_SQL_primary_final a
+    JOIN t_marketa_sverakova_project_SQL_primary_final b 
+        ON a.industry_branch_code = b.industry_branch_code 
+        AND a.`year` = b.`year` + 1   
+),
+YearlyTrends AS (
+    SELECT 
+    	industry_branch_code,
+        SUM(CASE WHEN yearly_difference > 0 THEN 1 ELSE 0 END) AS years_increasing,
+        SUM(CASE WHEN yearly_difference < 0 THEN 1 ELSE 0 END) AS years_decreasing
+    FROM YearlyDifference
+    GROUP BY industry_branch_code
+)
+SELECT
+	tms.industry_branch_code,
+    tms.industry_name,
+    yt.years_increasing, 
+    yt.years_decreasing,
+    CASE WHEN years_increasing > years_decreasing THEN 1 ELSE 0 END AS overall_increasing
+FROM 
+    t_marketa_sverakova_project_SQL_primary_final tms
+JOIN YearlyTrends yt ON tms.industry_branch_code = yt.industry_branch_code 
+GROUP BY
+	tms.industry_branch_code
+ORDER BY 
+    tms.industry_branch_code;
+
 
    
