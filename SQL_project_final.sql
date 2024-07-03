@@ -257,3 +257,53 @@ GROUP BY
 /* -> S jistotou lze říci, že pokud nedojde ke změně v HDP nad 3%, nedojde ani ke změně v cenách a mzdách o více jak 5%. 
  * Naopak pokud se HDP zvýší o více jak 3%, lze v následujícím roce nebo dvou sledovat i proměnu v cenách a mzdách o více jak 5%.
  */
+   
+ -- 6/ Jako dodatečný materiál připravte i tabulku s HDP, GINI koeficientem a populací dalších evropských států ve stejném období, jako primární přehled pro ČR.
+ 
+   
+   -- a) vyhledání zemí v Evropě
+
+SELECT
+    country
+FROM
+    countries c 
+WHERE
+   	CAST(independence_date AS INT) <= 2006
+    AND continent = 'Europe'
+;
+
+-- b) sekundární tabulka
+
+CREATE TABLE t_marketa_sverakova_project_SQL_secondary_final (
+    country VARCHAR(100),
+    year INT,
+    GDP DECIMAL(15, 2),
+    GINI DECIMAL(10, 2),
+    population BIGINT
+);
+
+INSERT INTO t_marketa_sverakova_project_SQL_secondary_final (country, year, GDP, GINI, population)
+WITH Europe AS (
+	SELECT
+    	country
+	FROM
+    	countries 
+	WHERE
+   		CAST(independence_date AS INT) <= 2006
+    	AND continent = 'Europe'
+)
+SELECT 
+	e.country,
+	e.`year`,
+	e.GDP,
+	e.gini,
+	e.population
+FROM
+	economies e
+JOIN 
+	Europe eu ON e.country = eu.country 
+WHERE e.`year` BETWEEN 2006 AND 2018
+ORDER BY e.country, e.`year`;
+
+SELECT *
+FROM t_marketa_sverakova_project_SQL_secondary_final;
