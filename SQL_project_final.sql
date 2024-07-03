@@ -119,5 +119,33 @@ GROUP BY
 ORDER BY 
     tms.industry_branch_code;
 
-
+/* KOLIK JE MOŽNÉ SI KOUPIT LITRŮ MLÉKA A KILOGRAMŮ CHLEBA ZA PRVNÍ A POSLEDNÍ SROVNATELNÉ
+ * OBDOBÍ V DOSTUPNÝCH DATECH CEN A MEZD?
+*/
+   
+SELECT
+    tms.industry_branch_code,
+    tms.industry_name,
+    tms.avg_salary AS avg_salary_2006,
+    tms.avg_price_bread AS avg_price_bread_2006,
+    tms.avg_price_milk AS avg_price_milk_2006,
+    ROUND(tms.avg_salary / tms.avg_price_bread) AS bread_quantity_2006,
+    ROUND(tms.avg_salary / tms.avg_price_milk) AS milk_quantity_2006,
+    CASE WHEN (tms.avg_salary / tms.avg_price_bread) < (tms2.avg_salary / tms2.avg_price_bread) THEN 1 ELSE 0 END AS flag_bread,
+    tms2.avg_salary AS avg_salary_2018,
+    tms2.avg_price_bread AS avg_price_bread_2018,
+    tms2.avg_price_milk AS avg_price_milk_2018,
+    ROUND(tms2.avg_salary / tms2.avg_price_bread) AS bread_quantity_2018,
+    ROUND(tms2.avg_salary / tms2.avg_price_milk) AS milk_quantity_2018,
+    CASE WHEN (tms.avg_salary / tms.avg_price_milk) < (tms2.avg_salary / tms2.avg_price_milk) THEN 1 ELSE 0 END AS flag_milk
+FROM 
+    t_marketa_sverakova_project_SQL_primary_final tms
+JOIN 
+    t_marketa_sverakova_project_SQL_primary_final tms2 
+ON 
+    tms.industry_branch_code = tms2.industry_branch_code 
+WHERE 
+    tms.`year` = 2006 AND tms2.`year` = 2018
+ORDER BY 
+    tms.industry_branch_code;
    
