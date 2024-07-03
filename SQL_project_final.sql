@@ -119,7 +119,7 @@ GROUP BY
 ORDER BY 
     tms.industry_branch_code;
 
-/* KOLIK JE MOŽNÉ SI KOUPIT LITRŮ MLÉKA A KILOGRAMŮ CHLEBA ZA PRVNÍ A POSLEDNÍ SROVNATELNÉ
+/* 2/ KOLIK JE MOŽNÉ SI KOUPIT LITRŮ MLÉKA A KILOGRAMŮ CHLEBA ZA PRVNÍ A POSLEDNÍ SROVNATELNÉ
  * OBDOBÍ V DOSTUPNÝCH DATECH CEN A MEZD?
 */
    
@@ -149,3 +149,66 @@ WHERE
 ORDER BY 
     tms.industry_branch_code;
    
+-- 3/ KTERÁ KATEGORIE POTRAVIN ZDRAŽUJE NEJPOMALEJI (je u ní nejnižší percentuální meziroční nárůst)?   
+
+
+WITH PriceIncrease AS ( 
+	SELECT 
+    	a.`year`,
+    	ROUND((a.avg_price_bread - b.avg_price_bread) / b.avg_price_bread * 100, 2) AS diff_bread_pct,
+    	ROUND(((a.avg_price_milk - b.avg_price_milk) / b.avg_price_milk) * 100, 2) AS diff_milk_pct
+	FROM 
+    	t_marketa_sverakova_project_SQL_primary_final a
+	JOIN 
+    	t_marketa_sverakova_project_SQL_primary_final b 
+        ON a.`year` = b.`year` + 1
+	GROUP BY 
+    	a.`year`
+)
+SELECT 
+	ROUND(AVG(p.diff_bread_pct), 2) AS avg_increase_bread,
+	ROUND(AVG(p.diff_milk_pct), 2) AS avg_increase_milk
+FROM 
+    PriceIncrease p ;
+
+-- -> Nejpomaleji zdražuje mléko - 2.98%
+   
+-- 4/ EXISTUJE ROK, VE KTERÉM BYL MEZIROČNÍ NÁRUST CEN POTRAVIN VÝRAZNĚ VYŠŠÍ NEŽ RŮST MEZD (větší než 10 %)?
+
+   
+WITH AvgPrice AS (
+	SELECT 
+		`year`,
+		ROUND((avg_price_bread + avg_price_milk)/2, 2) AS avg_price
+	FROM 
+		t_marketa_sverakova_project_SQL_primary_final
+),
+AvgPriceDiff AS (
+	SELECT
+		a.`year`,
+		ROUND((a.avg_price - b.avg_price) / b.avg_price * 100, 2) AS price_diff_pct
+	FROM 
+    	AvgPrice a
+	JOIN 
+    	AvgPrice b 
+    	ON a.`year` = b.`year` + 1
+),		
+AvgSalaryDiff AS (
+    SELECT
+        a.`year`,
+        ROUND(((a.avg_salary - b.avg_salary) / b.avg_salary) * 100, 2) AS payroll_diff_pct
+    FROM 
+        t_marketa_sverakova_project_SQL_primary_final a
+    JOIN 
+        t_marketa_sverakova_project_SQL_primary_final b ON a.`year` = b.`year` + 1
+) 
+SELECT 
+	p.`year`,
+	p.price_diff_pct,
+	s.payroll_diff_pct,
+	CASE WHEN (p.price_diff_pct - s.payroll_diff_pct) > 10 THEN 1 ELSE 0 END AS flag_10_pct
+FROM AvgPriceDiff p
+JOIN AvgSalaryDiff s ON p.`year` = s.`year`
+GROUP BY p.`year`
+;
+-- -> V roce 2011 narostly ceny potravin o více než 10% oproti mzdám.
