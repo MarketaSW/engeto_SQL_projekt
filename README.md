@@ -3,7 +3,7 @@
 **Autor:** Markéta Svěráková Wallo  
 **Email:** marketa.wallo@gmail.com  
 **Discord:** marketasverakova_37252  
-**GitHub repozitář:** [github.com/MarketaSW/engeto_SQL_projekt](https://github.com/MarketaSW/engeto_SQL_projekt)
+**GitHub Repozitář:** [github.com/MarketaSW/engeto_SQL_projekt](https://github.com/MarketaSW/engeto_SQL_projekt)
 
 Čtvrtý projekt akademie Engeto ukazuje použití SQL na MariaDB v programu DBeaver. Úkolem bylo vytvořit si vlastní datové podklady z datových sad a následně pomocí dotazů získat odpovědi na 5 výzkumných otázek.
 
@@ -37,4 +37,3 @@ S jistotou lze říci, že pokud nedojde ke změně v HDP nad 3%, nedojde ani ke
 
 ## Závěr
 Závěrem lze říci, že životní úroveň daná dostupností základních potravin se mezi léty 2006 - 2018 zvýšila u odvětví na spodní hranici, naopak u nejlépe placených odvětví došlo k poklesu. Růst cen potravin odpovídal růstu mezd, za povšimnutí stojí pouze rok 2011, kdy ceny potravin narostly o více než 10% oproti mzdám. To, jak se dařilo ekonomice, mělo vliv i na ceny a mzdy. Nejhůře rostoucím odvětvím byla Těžba a dobývání, kde se mzdy zvedaly jen 8 let z 12.
-
